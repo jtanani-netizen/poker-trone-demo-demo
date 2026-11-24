@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0e13">
+<title>Poker du Trône — Texas Hold'em privé</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body { background:#0b0e13; color:#e8e4d8; font-family: Georgia, 'Times New Roman', serif;
+    -webkit-tap-highlight-color: transparent; }
+  button { font-family: inherit; cursor:pointer; }
+  input { font-family: inherit; }
+
+  /* ---------- SALON (lobby) ---------- */
+  #lobby { max-width:480px; margin:0 auto; padding:0 16px 32px; }
+  #lobby .hero { width:100%; border-radius:0 0 18px 18px; display:block;
+    box-shadow:0 12px 40px rgba(0,0,0,.7); }
+  #lobby h1 { text-align:center; font-size:30px; letter-spacing:.14em; color:#e6c96a;
+    margin:18px 0 2px; text-transform:uppercase; }
+  #lobby .sub { text-align:center; color:#9a958a; font-size:13.5px; font-style:italic; margin-bottom:18px; }
+  .tabs { display:flex; gap:8px; margin-bottom:14px; }
+  .tabs button { flex:1; padding:12px; border-radius:10px; border:1px solid rgba(212,175,55,.5);
+    background:#14161c; color:#cfcaba; font-size:15px; letter-spacing:.04em; }
+  .tabs button.on { background:linear-gradient(180deg,#8a6d1f,#6d5514); color:#fff; border-color:#d4af37; }
+  .cardbox { background:linear-gradient(180deg, rgba(24,24,28,.95), rgba(12,12,14,.97));
+    border:1px solid rgba(212,175,55,.45); border-radius:14px; padding:16px; }
+  .cardbox label { display:block; font-size:12px; letter-spacing:.12em; color:#9a958a;
+    text-transform:uppercase; margin:12px 0 5px; }
+  .cardbox label:first-child { margin-top:0; }
+  .cardbox input { width:100%; padding:12px; border-radius:9px; border:1px solid #3a3f4a;
+    background:#0e1013; color:#f2efe6; font-size:16px; }
+  .bigbtn { width:100%; margin-top:16px; padding:14px; border:none; border-radius:11px;
+    background:linear-gradient(180deg,#a8842a,#7c611a); color:#fff; font-size:16.5px;
+    letter-spacing:.06em; box-shadow:0 6px 18px rgba(0,0,0,.5); }
+  .bigbtn:active { transform:translateY(1px); }
+  .invite { margin-top:14px; background:#0e1013; border:1px dashed rgba(212,175,55,.6);
+    border-radius:11px; padding:12px; font-size:14px; line-height:1.55; display:none; }
+  .invite .code { font-size:24px; letter-spacing:.22em; color:#e6c96a; text-align:center;
+    font-weight:bold; margin:4px 0; }
+  .invite button { width:100%; margin-top:9px; padding:10px; border-radius:9px;
+    border:1px solid rgba(212,175,55,.5); background:#181a20; color:#e6c96a; font-size:14px; }
+  .err { color:#ff9c8a; font-size:13.5px; min-height:18px; margin-top:8px; }
+  .rules { margin-top:16px; color:#9a958a; font-size:13px; line-height:1.6; }
+  .rules b { color:#cfcaba; }
+
+  /* ---------- TABLE ---------- */
+  #table { display:none; max-width:520px; margin:0 auto; padding:8px 10px 190px;
+    background:linear-gradient(rgba(5,6,8,.84), rgba(5,6,8,.94)), url('fond.jpg') center 0 / cover no-repeat; }
+  .topbar { display:flex; justify-content:space-between; align-items:center; padding:6px 8px 8px;
+    background:rgba(8,9,11,.55); border-radius:10px; }
+  .topbar .tcode { color:#e6c96a; letter-spacing:.14em; font-size:13px; }
+  .topbar button { background:#181a20; color:#cfcaba; border:1px solid #3a3f4a;
+    border-radius:8px; padding:7px 11px; font-size:13px; }
+  .felt { position:relative; height:430px; border-radius:46%;
+    background:radial-gradient(ellipse at 50% 42%, #3a3e45 0%, #26292f 55%, #131519 100%);
+    border:10px solid #171208; outline:2px solid rgba(212,175,55,.55);
+    box-shadow: inset 0 0 60px rgba(0,0,0,.7), 0 18px 44px rgba(0,0,0,.65); }
+  .felt::after { content:''; position:absolute; left:50%; top:44%; width:158px; height:158px;
+    transform:translate(-50%,-50%); border:2px solid rgba(212,175,55,.20); border-radius:50%;
+    box-shadow: inset 0 0 0 7px rgba(212,175,55,.05), 0 0 0 1px rgba(0,0,0,.3); pointer-events:none; }
+  .banner { position:absolute; top:-14px; width:37px; height:60px; z-index:3;
+    display:flex; align-items:flex-end; justify-content:center; padding-bottom:6px; font-size:17px;
+    clip-path:polygon(0 0, 100% 0, 100% 100%, 50% 83%, 0 100%);
+    box-shadow:0 6px 14px rgba(0,0,0,.55); }
+  .banner.b1 { left:17px; background:linear-gradient(180deg,#454e59,#22262d); }
+  .banner.b2 { right:17px; background:linear-gradient(180deg,#7d1f28,#42090f); }
+  .throne { position:absolute; left:50%; top:38px; width:152px; height:152px;
+    margin:-76px 0 0 -76px; z-index:-1; pointer-events:none; }
+  .throne.grand { width:188px; height:188px; margin:-94px 0 0 -94px; top:38px; }
+  .center { position:absolute; left:50%; top:44%; transform:translate(-50%,-50%);
+    text-align:center; width:78%; }
+  .board { display:flex; gap:5px; justify-content:center; min-height:56px; }
+  .pot { margin-top:8px; color:#ffe9a8; font-size:16.5px; letter-spacing:.05em; }
+  .street { color:#9a958a; font-size:11.5px; letter-spacing:.22em; text-transform:uppercase; margin-top:2px; }
+  .seat { position:absolute; width:104px; text-align:center; transform:translate(-50%,-50%); z-index:2; }
+  .seat .avatar { width:46px; height:46px; margin:0 auto; border-radius:50%;
+    border:2px solid rgba(212,175,55,.65); display:flex; align-items:center; justify-content:center;
+    font-size:19px; background:radial-gradient(circle at 35% 30%, #3a3f4a, #17181d); color:#e6c96a; }
+  .seat.turn .avatar { border-color:#ffe9a8; box-shadow:0 0 0 3px rgba(255,233,168,.35), 0 0 18px rgba(255,233,168,.5); }
+  .seat.folded { opacity:.42; }
+  .seat .nm { font-size:12px; color:#f2efe6; margin-top:3px; text-shadow:0 1px 3px #000; }
+  .seat .hs { font-size:10px; color:#b7b2a4; letter-spacing:.08em; }
+  .seat .ch { font-size:12px; color:#ffe9a8; }
+  .seat .bt { display:inline-block; margin-top:2px; font-size:10.5px; color:#0e1013; background:#e6c96a;
+    border-radius:8px; padding:1px 7px; font-weight:bold; min-height:14px; }
+  .seat .bt:empty { background:transparent; }
+  .seat .dl { display:inline-block; width:17px; height:17px; line-height:17px; border-radius:50%;
+    background:#e8e4d8; color:#111; font-size:10.5px; font-weight:bold; vertical-align:middle; }
+  .seat .bubble { position:absolute; left:50%; transform:translateX(-50%); bottom:100%;
+    background:#f5efdd; color:#222; font-size:11.5px; border-radius:9px; padding:4px 8px;
+    white-space:nowrap; box-shadow:0 4px 12px rgba(0,0,0,.5); display:none; z-index:5; }
+  .hand { display:flex; gap:4px; justify-content:center; margin-top:3px; min-height:40px; }
+  .pcard { width:29px; height:40px; border-radius:5px; background:#f5f1e6; color:#1c1c1c;
+    font-size:13.5px; font-weight:bold; display:flex; flex-direction:column; align-items:center;
+    justify-content:center; line-height:1.05; box-shadow:0 2px 6px rgba(0,0,0,.45); }
+  .pcard.red { color:#b3271e; }
+  .pcard.back { background:repeating-linear-gradient(45deg,#5d1420 0 5px,#471019 5px 10px);
+    border:1.5px solid #d4af37; }
+  .board .pcard { width:38px; height:54px; font-size:16.5px; border-radius:6px; }
+  .board .pcard.empty { background:rgba(255,255,255,.06); border:1px dashed rgba(232,228,216,.3); box-shadow:none; }
+
+  /* ---------- Barre d'actions ---------- */
+  #actions { position:fixed; left:0; right:0; bottom:0; z-index:20;
+    background:linear-gradient(180deg, rgba(16,17,21,.92), rgba(10,10,12,.98));
+    border-top:1px solid rgba(212,175,55,.45); padding:10px 12px calc(10px + env(safe-area-inset-bottom)); }
+  #actions .row { display:flex; gap:8px; max-width:520px; margin:0 auto; }
+  #actions button { flex:1; padding:14px 6px; border-radius:11px; border:none; font-size:15.5px;
+    letter-spacing:.03em; color:#fff; }
+  .b-fold { background:#5a2320; } .b-call { background:#20503a; } .b-raise { background:#7c611a; }
+  #actions button:disabled { opacity:.35; }
+  #raiseRow { display:none; gap:8px; max-width:520px; margin:8px auto 0; align-items:center; }
+  #raiseRow input[type=range] { flex:1; accent-color:#d4af37; }
+  #raiseRow .amt { color:#ffe9a8; font-size:16px; min-width:64px; text-align:right; }
+  #raiseRow button { flex:0 0 auto; padding:11px 14px; }
+  #waitMsg { text-align:center; color:#9a958a; font-size:14px; padding:6px 0 2px; }
+  #banner { display:none; max-width:520px; margin:10px auto 0; text-align:center;
+    background:rgba(124,97,26,.22); border:1px solid rgba(212,175,55,.6); color:#ffe9a8;
+    border-radius:11px; padding:11px; font-size:15.5px; line-height:1.5; }
+  #banner button { margin-top:8px; padding:11px 18px; border:none; border-radius:9px;
+    background:linear-gradient(180deg,#a8842a,#7c611a); color:#fff; font-size:15px; }
+  #logBox { max-width:520px; margin:12px auto 0; background:#101216; border:1px solid #262a33;
+    border-radius:11px; padding:10px 12px; font-size:12.5px; color:#b7b2a4; line-height:1.65;
+    max-height:150px; overflow-y:auto; }
+</style>
+</head>
+<body>
+
+<!-- ================= SALON ================= -->
+<div id="lobby">
+  <img class="hero" src="hero.jpg" alt="La partie du Trône">
+  <h1>Poker du Trône</h1>
+  <p class="sub">Texas Hold'em entre maisons — tables privées, sur invitation.</p>
+  <div class="tabs">
+    <button id="tabCreate" class="on">Créer une table</button>
+    <button id="tabJoin">Rejoindre</button>
+  </div>
+  <div class="cardbox">
+    <label for="inName">Votre nom</label>
+    <input id="inName" type="text" maxlength="18" placeholder="Ex. Gabriel" autocomplete="name">
+    <label for="inEmail">Votre e-mail</label>
+    <input id="inEmail" type="email" placeholder="vous@exemple.com" autocomplete="email">
+    <div id="joinPart" style="display:none">
+      <label for="inCode">Code d'accès de la table</label>
+      <input id="inCode" type="text" maxlength="10" placeholder="TRONE-0000" style="text-transform:uppercase">
+    </div>
+    <div class="err" id="lobbyErr"></div>
+    <button class="bigbtn" id="btnEnter">Créer ma table privée</button>
+    <div class="invite" id="inviteBox">
+      <div style="text-align:center;color:#9a958a;font-size:12px;letter-spacing:.15em">CODE DE VOTRE TABLE</div>
+      <div class="code" id="inviteCode">TRONE-0000</div>
+      <div id="inviteText"></div>
+      <button id="btnCopy">Copier l'invitation</button>
+    </div>
+  </div>
+  <p class="rules"><b>La partie :</b> 6 sièges autour de la table du Trône, blinds
+  10 / 20, cave de 1 000 dragons d'or. Les sièges libres sont tenus par les grandes
+  maisons — Stark, Lannister, Targaryen, Baratheon, Greyjoy — chacune avec son style.
+  <b>Table privée :</b> vous créez la table, vous gardez le code, vous invitez qui vous voulez.</p>
+</div>
+
+<!-- ================= TABLE ================= -->
+<div id="table">
+  <div class="topbar">
+    <span class="tcode" id="tableCode">TABLE TRONE-0000</span>
+    <button id="btnQuit">Quitter</button>
+  </div>
+  <div class="felt" id="felt">
+    <div class="center">
+      <div class="board" id="board"></div>
+      <div class="pot" id="pot">Pot : 0</div>
+      <div class="street" id="street">En attente</div>
+    </div>
+  </div>
+  <div id="banner"></div>
+  <div id="logBox"></div>
+</div>
+
+<div id="actions" style="display:none">
+  <div id="waitMsg">La partie commence…</div>
+  <div class="row" id="btnRow" style="display:none">
+    <button class="b-fold" id="btnFold">Se coucher</button>
+    <button class="b-call" id="btnCall">Parole</button>
+    <button class="b-raise" id="btnRaise">Relancer</button>
+  </div>
+  <div id="raiseRow">
+    <input type="range" id="raiseRange">
+    <span class="amt" id="raiseAmt">0</span>
+    <button class="b-raise" id="btnRaiseGo">Relancer</button>
+    <button class="b-fold" id="btnRaiseCancel" style="flex:0 0 auto;padding:11px 12px">Retour</button>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   POKER DU TRÔNE — moteur Texas Hold'em PUR (aucun accès écran).
+   État + action → nouvel état. Testable sous Node (simulation de
+   masse) comme dans le navigateur. Règles : blinds 10/20, 6 sièges,
+   pots annexes (side pots) calculés sur les contributions.
+   ============================================================ */
+'use strict';
+
+/* ---------- RNG amorçable (parties rejouables) ---------- */
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/* ---------- Cartes : {r:2..14 (11=V,12=D,13=R,14=A), s:0..3} ---------- */
+const SUITS = ['♠', '♥', '♦', '♣'];
+const RANKS = { 11: 'V', 12: 'D', 13: 'R', 14: 'A' };
+function rankLabel(r) { return RANKS[r] || String(r); }
+function cardLabel(c) { return rankLabel(c.r) + SUITS[c.s]; }
+
+function newDeck() {
+  const d = [];
+  for (let s = 0; s < 4; s++) for (let r = 2; r <= 14; r++) d.push({ r, s });
+  return d;
+}
+function shuffle(deck, rng) {
+  const d = deck.slice();
+  for (let i = d.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [d[i], d[j]] = [d[j], d[i]];
+  }
+  return d;
+}
+
+/* ---------- Évaluation d'une main de 5 cartes ---------- */
+/* Retourne [catégorie, ...départs] comparable lexicographiquement.
+   8 quinte flush, 7 carré, 6 full, 5 couleur, 4 quinte, 3 brelan,
+   2 double paire, 1 paire, 0 hauteur. */
+function score5(cards) {
+  const rs = cards.map(c => c.r).sort((a, b) => b - a);
+  const flush = cards.every(c => c.s === cards[0].s);
+  const uniq = [...new Set(rs)];
+  let straightHigh = 0;
+  if (uniq.length === 5) {
+    if (uniq[0] - uniq[4] === 4) straightHigh = uniq[0];
+    else if (uniq.join(',') === '14,5,4,3,2') straightHigh = 5; // roue
+  }
+  const counts = {};
+  rs.forEach(r => { counts[r] = (counts[r] || 0) + 1; });
+  const groups = Object.entries(counts)
+    .map(([r, n]) => ({ r: +r, n }))
+    .sort((a, b) => (b.n - a.n) || (b.r - a.r));
+  if (straightHigh && flush) return [8, straightHigh];
+  if (groups[0].n === 4) return [7, groups[0].r, groups[1].r];
+  if (groups[0].n === 3 && groups[1] && groups[1].n === 2)
+    return [6, groups[0].r, groups[1].r];
+  if (flush) return [5, ...rs];
+  if (straightHigh) return [4, straightHigh];
+  if (groups[0].n === 3)
+    return [3, groups[0].r, ...groups.slice(1).map(g => g.r).sort((a, b) => b - a)];
+  if (groups[0].n === 2 && groups[1] && groups[1].n === 2) {
+    const pairs = groups.filter(g => g.n === 2).map(g => g.r).sort((a, b) => b - a);
+    const kick = groups.find(g => g.n === 1).r;
+    return [2, ...pairs, kick];
+  }
+  if (groups[0].n === 2)
+    return [1, groups[0].r, ...groups.slice(1).map(g => g.r).sort((a, b) => b - a)];
+  return [0, ...rs];
+}
+function cmpScore(a, b) {
+  const n = Math.max(a.length, b.length);
+  for (let i = 0; i < n; i++) {
+    const d = (a[i] || 0) - (b[i] || 0);
+    if (d !== 0) return d;
+  }
+  return 0;
+}
+const HAND_NAMES = ['Hauteur', 'Paire', 'Double paire', 'Brelan', 'Quinte',
+  'Couleur', 'Full', 'Carré', 'Quinte flush'];
+function bestOf7(cards) {
+  // Meilleure main de 5 parmi 5, 6 ou 7 cartes (flop = 5 au total).
+  const n = cards.length;
+  let best = null;
+  for (let a = 0; a < n - 4; a++)
+    for (let b = a + 1; b < n - 3; b++)
+      for (let c = b + 1; c < n - 2; c++)
+        for (let d = c + 1; d < n - 1; d++)
+          for (let e = d + 1; e < n; e++) {
+            const sc = score5([cards[a], cards[b], cards[c], cards[d], cards[e]]);
+            if (!best || cmpScore(sc, best) > 0) best = sc;
+          }
+  return best;
+}
+
+/* ---------- Joueurs et partie ---------- */
+const SMALL_BLIND = 10, BIG_BLIND = 20, START_CHIPS = 1000;
+
+function createGame(playerDefs, seed) {
+  return {
+    rng: mulberry32(seed || 1234567),
+    players: playerDefs.map((p, i) => ({
+      seat: i, name: p.name, house: p.house || '', isBot: !!p.isBot,
+      style: p.style || 'regular', chips: START_CHIPS,
+      hand: [], folded: true, allIn: false, bet: 0, contributed: 0,
+      inHand: false, lastAction: ''
+    })),
+    dealer: 0, deck: [], board: [], street: 'idle', // idle|preflop|flop|turn|river|showdown|done
+    currentBet: 0, minRaise: BIG_BLIND, actor: -1, handNo: 0,
+    log: [], winners: []
+  };
+}
+function activePlayers(g) { return g.players.filter(p => p.inHand && !p.folded); }
+function movablePlayers(g) { return activePlayers(g).filter(p => !p.allIn); }
+function nextSeat(g, from, pred) {
+  const n = g.players.length;
+  for (let k = 1; k <= n; k++) {
+    const p = g.players[(from + k) % n];
+    if (pred(p)) return p.seat;
+  }
+  return -1;
+}
+function say(g, text) { g.log.push(text); if (g.log.length > 60) g.log.shift(); }
+
+function startHand(g) {
+  g.handNo++;
+  g.board = []; g.winners = [];
+  g.deck = shuffle(newDeck(), g.rng);
+  g.players.forEach(p => {
+    p.hand = []; p.folded = false; p.allIn = false;
+    p.bet = 0; p.contributed = 0; p.lastAction = '';
+    p.inHand = p.chips > 0;
+    if (!p.inHand) p.folded = true;
+  });
+  const inGame = g.players.filter(p => p.inHand);
+  if (inGame.length < 2) { g.street = 'done'; return; }
+  // Bouton : avance au prochain joueur en jeu.
+  g.dealer = g.handNo === 1 ? inGame[0].seat
+    : nextSeat(g, g.dealer, p => p.inHand);
+  // Distribution : 2 cartes à chacun.
+  for (let k = 0; k < 2; k++)
+    for (const p of inGame) p.hand.push(g.deck.pop());
+  // Blinds.
+  const sbSeat = nextSeat(g, g.dealer, p => p.inHand);
+  const bbSeat = nextSeat(g, sbSeat, p => p.inHand);
+  postBlind(g, g.players[sbSeat], SMALL_BLIND);
+  postBlind(g, g.players[bbSeat], BIG_BLIND);
+  g.currentBet = BIG_BLIND; g.minRaise = BIG_BLIND;
+  g.street = 'preflop';
+  g.actor = nextSeat(g, bbSeat, p => p.inHand && !p.allIn);
+  say(g, '— Main n°' + g.handNo + ' · bouton : ' + g.players[g.dealer].name + ' —');
+  markToAct(g);
+}
+function postBlind(g, p, amount) {
+  const a = Math.min(amount, p.chips);
+  p.chips -= a; p.bet += a; p.contributed += a;
+  if (p.chips === 0) p.allIn = true;
+  p.lastAction = 'blind ' + a;
+}
+/* Marque qui doit encore parler dans le tour courant. */
+function markToAct(g) {
+  g.players.forEach(p => { p.acted = !(p.inHand && !p.folded && !p.allIn); });
+  // Celui qui a la plus grosse mise (la grosse blind préflop) doit
+  // encore pouvoir parler : on réarme tous ceux qui n'ont pas égalé.
+  g.players.forEach(p => {
+    if (p.inHand && !p.folded && !p.allIn && p.bet < g.currentBet) p.acted = false;
+  });
+}
+
+/* ---------- Actions ---------- */
+function legalActions(g, seat) {
+  const p = g.players[seat];
+  if (!p || g.actor !== seat || p.folded || p.allIn) return null;
+  const toCall = g.currentBet - p.bet;
+  return {
+    fold: true,
+    check: toCall === 0,
+    call: toCall > 0 ? Math.min(toCall, p.chips) : 0,
+    minRaiseTo: g.currentBet + g.minRaise,
+    maxRaiseTo: p.bet + p.chips
+  };
+}
+function applyAction(g, seat, action) {
+  const p = g.players[seat];
+  const legal = legalActions(g, seat);
+  if (!legal) return false;
+  if (action.type === 'fold') {
+    p.folded = true; p.acted = true; p.lastAction = 'se couche';
+    say(g, p.name + ' se couche.');
+  } else if (action.type === 'check') {
+    if (!legal.check) return false;
+    p.acted = true; p.lastAction = 'parole';
+    say(g, p.name + ' : parole.');
+  } else if (action.type === 'call') {
+    if (legal.call <= 0) return false;
+    const a = legal.call;
+    p.chips -= a; p.bet += a; p.contributed += a;
+    if (p.chips === 0) p.allIn = true;
+    p.acted = true; p.lastAction = 'suit ' + a;
+    say(g, p.name + ' suit ' + a + '.');
+  } else if (action.type === 'raise') {
+    let to = Math.max(action.to, legal.minRaiseTo);
+    to = Math.min(to, legal.maxRaiseTo);
+    if (to <= g.currentBet) return false;
+    const a = to - p.bet;
+    p.chips -= a; p.bet += a; p.contributed += a;
+    if (p.chips === 0) p.allIn = true;
+    const raiseSize = to - g.currentBet;
+    if (raiseSize >= g.minRaise) g.minRaise = raiseSize;
+    g.currentBet = to;
+    p.lastAction = 'relance à ' + to;
+    say(g, p.name + ' relance à ' + to + ' !');
+    // Une relance réarme tous les autres.
+    g.players.forEach(q => {
+      if (q.inHand && !q.folded && !q.allIn && q.seat !== seat) q.acted = false;
+    });
+    p.acted = true;
+  } else {
+    return false;
+  }
+  advance(g);
+  return true;
+}
+function roundClosed(g) {
+  return g.players.every(p =>
+    !p.inHand || p.folded || p.allIn || (p.acted && p.bet === g.currentBet) ||
+    (p.acted && p.chips === 0));
+}
+function advance(g) {
+  if (activePlayers(g).length <= 1) return finishHand(g);
+  if (!roundClosed(g)) {
+    g.actor = nextSeat(g, g.actor, p => p.inHand && !p.folded && !p.allIn && !p.acted);
+    if (g.actor === -1) return nextStreet(g); // sécurité
+    return;
+  }
+  nextStreet(g);
+}
+function nextStreet(g) {
+  g.players.forEach(p => { p.bet = 0; });
+  g.currentBet = 0; g.minRaise = BIG_BLIND;
+  if (g.street === 'preflop') {
+    g.board.push(g.deck.pop(), g.deck.pop(), g.deck.pop());
+    g.street = 'flop';
+  } else if (g.street === 'flop') {
+    g.board.push(g.deck.pop()); g.street = 'turn';
+  } else if (g.street === 'turn') {
+    g.board.push(g.deck.pop()); g.street = 'river';
+  } else if (g.street === 'river') {
+    return showdown(g);
+  }
+  say(g, '— ' + g.street.toUpperCase() + ' : ' +
+    g.board.map(cardLabel).join(' ') + ' —');
+  if (movablePlayers(g).length === 0) return nextStreet(g); // tous tapis
+  g.players.forEach(p => { p.acted = !(p.inHand && !p.folded && !p.allIn); });
+  g.actor = nextSeat(g, g.dealer, p => p.inHand && !p.folded && !p.allIn);
+  if (g.actor === -1) return nextStreet(g);
+}
+function potTotal(g) {
+  return g.players.reduce((s, p) => s + p.contributed, 0);
+}
+/* Pots (principal + annexes) depuis les contributions. */
+function buildPots(g) {
+  const contrib = g.players.filter(p => p.contributed > 0);
+  const levels = [...new Set(contrib.map(p => p.contributed))].sort((a, b) => a - b);
+  const pots = [];
+  let prev = 0;
+  for (const lvl of levels) {
+    const inLevel = contrib.filter(p => p.contributed >= lvl);
+    const amount = (lvl - prev) * inLevel.length;
+    const eligible = inLevel.filter(p => !p.folded).map(p => p.seat);
+    if (amount > 0 && eligible.length) pots.push({ amount, eligible });
+    prev = lvl;
+  }
+  return pots;
+}
+function finishHand(g) {
+  // Un seul joueur restant : il prend tout le pot.
+  const alive = activePlayers(g);
+  const pots = buildPots(g);
+  g.winners = [];
+  if (alive.length === 1) {
+    const total = potTotal(g);
+    alive[0].chips += total;
+    g.winners.push({ seat: alive[0].seat, amount: total, handName: 'tous couchés' });
+    say(g, alive[0].name + ' remporte ' + total + ' (tous les autres se sont couchés).');
+  }
+  void pots;
+  g.street = 'done'; g.actor = -1;
+}
+function showdown(g) {
+  g.street = 'showdown';
+  const pots = buildPots(g);
+  g.winners = [];
+  for (const pot of pots) {
+    let best = null; const scored = pot.eligible.map(seat => {
+      const p = g.players[seat];
+      const sc = bestOf7([...p.hand, ...g.board]);
+      if (!best || cmpScore(sc, best) > 0) best = sc;
+      return { seat, sc };
+    });
+    const winners = scored.filter(s => cmpScore(s.sc, best) === 0);
+    const share = Math.floor(pot.amount / winners.length);
+    let rest = pot.amount - share * winners.length;
+    for (const w of winners) {
+      const amt = share + (rest > 0 ? 1 : 0); if (rest > 0) rest--;
+      g.players[w.seat].chips += amt;
+      g.winners.push({ seat: w.seat, amount: amt, handName: HAND_NAMES[best[0]] });
+    }
+    say(g, winners.map(w => g.players[w.seat].name).join(' & ') +
+      ' remporte(nt) ' + pot.amount + ' avec ' + HAND_NAMES[best[0]] + '.');
+  }
+  g.street = 'done'; g.actor = -1;
+}
+
+/* ---------- Bots : heuristiques lisibles, par style ---------- */
+/* Force préflop 0..1 : paire, hauteurs, assorties, connectées. */
+function preflopStrength(hand) {
+  const [a, b] = hand;
+  const hi = Math.max(a.r, b.r), lo = Math.min(a.r, b.r);
+  let s = (hi - 2) / 12 * 0.45 + (lo - 2) / 12 * 0.25;
+  if (a.r === b.r) s = 0.55 + (a.r - 2) / 12 * 0.45;
+  if (a.s === b.s) s += 0.06;
+  if (Math.abs(a.r - b.r) === 1) s += 0.04;
+  if (hi === 14) s += 0.08;
+  return Math.min(1, s);
+}
+/* Force postflop 0..1 : catégorie de la meilleure main + potentiel. */
+function postflopStrength(p, board) {
+  const sc = bestOf7([...p.hand, ...board]);
+  return Math.min(1, 0.12 + sc[0] * 0.13 + (sc[1] || 0) / 14 * 0.05);
+}
+const STYLE = {
+  tight:     { play: 0.62, raise: 0.80, bluff: 0.02, callLoose: 0.9 },
+  regular:   { play: 0.45, raise: 0.65, bluff: 0.05, callLoose: 1.0 },
+  aggressive:{ play: 0.32, raise: 0.50, bluff: 0.13, callLoose: 1.15 }
+};
+function botDecide(g, seat) {
+  const p = g.players[seat];
+  const legal = legalActions(g, seat);
+  if (!legal) return { type: 'fold' };
+  const st = STYLE[p.style] || STYLE.regular;
+  const strength = g.street === 'preflop'
+    ? preflopStrength(p.hand) : postflopStrength(p, g.board);
+  const pot = potTotal(g) + g.players.reduce((s, q) => s + q.bet, 0) * 0;
+  const toCall = g.currentBet - p.bet;
+  const jitter = (g.rng() - 0.5) * 0.14;
+  const s = strength + jitter;
+  if (g.rng() < st.bluff && toCall <= p.chips * 0.2 && legal.maxRaiseTo >= legal.minRaiseTo) {
+    return { type: 'raise', to: Math.min(legal.minRaiseTo + BIG_BLIND * 2, legal.maxRaiseTo) };
+  }
+  if (toCall === 0) {
+    if (s > st.raise && legal.maxRaiseTo >= legal.minRaiseTo)
+      return { type: 'raise', to: Math.min(legal.minRaiseTo + BIG_BLIND, legal.maxRaiseTo) };
+    return { type: 'check' };
+  }
+  const odds = toCall / Math.max(1, pot + toCall);
+  if (s < st.play * odds * 2.2 * st.callLoose && s < 0.55) return { type: 'fold' };
+  if (s > st.raise && legal.maxRaiseTo >= legal.minRaiseTo && g.rng() < 0.6)
+    return { type: 'raise', to: Math.min(legal.minRaiseTo + BIG_BLIND, legal.maxRaiseTo) };
+  return { type: 'call' };
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    mulberry32, newDeck, shuffle, score5, cmpScore, bestOf7, HAND_NAMES,
+    createGame, startHand, legalActions, applyAction, botDecide,
+    potTotal, activePlayers, cardLabel, SMALL_BLIND, BIG_BLIND, START_CHIPS
+  };
+}
+
+</script>
+<script>
+'use strict';
+/* ================= Interface — elle lit le moteur, elle ne le refait pas. */
+const HOUSES = [
+  { name: 'Eddard', house: 'Stark', style: 'tight', sigil: '🐺', quote: 'L’hiver vient, je joue serré.' },
+  { name: 'Tyrion', house: 'Lannister', style: 'aggressive', sigil: '🦁', quote: 'Un Lannister paie toujours ses dettes.' },
+  { name: 'Daenerys', house: 'Targaryen', style: 'regular', sigil: '🐉', quote: 'Je ne suis pas une femme ordinaire.' },
+  { name: 'Robert', house: 'Baratheon', style: 'aggressive', sigil: '🦌', quote: 'Du vin ! Et des jetons !' },
+  { name: 'Theon', house: 'Greyjoy', style: 'tight', sigil: '🐙', quote: 'Ce qui est mort ne peut mourir.' }
+];
+const $ = id => document.getElementById(id);
+let mode = 'create';
+let myCode = '';
+let game = null;
+let timer = null;
+
+function genCode() {
+  return 'TRONE-' + String(Math.floor(1000 + Math.random() * 9000));
+}
+function validEmail(e) { return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e); }
+
+/* ---------- Salon ---------- */
+$('tabCreate').onclick = () => setMode('create');
+$('tabJoin').onclick = () => setMode('join');
+function setMode(m) {
+  mode = m;
+  $('tabCreate').classList.toggle('on', m === 'create');
+  $('tabJoin').classList.toggle('on', m === 'join');
+  $('joinPart').style.display = m === 'join' ? 'block' : 'none';
+  $('btnEnter').textContent = m === 'create' ? 'Créer ma table privée' : 'Rejoindre la table';
+  $('lobbyErr').textContent = '';
+}
+$('btnEnter').onclick = () => {
+  const name = $('inName').value.trim();
+  const email = $('inEmail').value.trim();
+  if (name.length < 2) return err('Dites-moi votre nom (2 lettres au moins).');
+  if (!validEmail(email)) return err('Un e-mail valide est demandé pour la table privée.');
+  if (mode === 'create') {
+    myCode = genCode();
+    $('inviteCode').textContent = myCode;
+    $('inviteText').innerHTML = 'Partagez ce code à vos invités : ils ouvrent le lien, ' +
+      'choisissent « Rejoindre », et saisissent le code avec leur nom et leur e-mail.';
+    $('inviteBox').style.display = 'block';
+    $('btnEnter').textContent = 'Entrer à ma table';
+    $('btnEnter').onclick = () => enterTable(name, email, myCode);
+    localStorage.setItem('trone_identity', JSON.stringify({ name, email }));
+  } else {
+    const code = $('inCode').value.trim().toUpperCase();
+    if (!/^TRONE-\d{4}$/.test(code)) return err('Le code ressemble à TRONE-1234.');
+    localStorage.setItem('trone_identity', JSON.stringify({ name, email }));
+    enterTable(name, email, code);
+  }
+};
+function err(t) { $('lobbyErr').textContent = t; }
+$('btnCopy').onclick = async () => {
+  const text = 'Je t’invite à ma table privée de Poker du Trône (Texas Hold’em). ' +
+    'Ouvre ' + location.href.split('#')[0] + ' , choisis « Rejoindre », code : ' + myCode;
+  try { await navigator.clipboard.writeText(text); $('btnCopy').textContent = 'Invitation copiée ✓'; }
+  catch (e) { $('btnCopy').textContent = text; }
+};
+
+/* ---------- Entrée à la table ---------- */
+function enterTable(name, email, code) {
+  myCode = code;
+  const defs = [{ name, house: 'Votre maison', isBot: false, style: 'regular' }]
+    .concat(HOUSES.map(h => ({ name: h.name, house: h.house, isBot: true, style: h.style })));
+  game = createGame(defs, (Date.now() % 100000) + 7);
+  game.log = [];
+  $('lobby').style.display = 'none';
+  $('table').style.display = 'block';
+  $('actions').style.display = 'block';
+  $('tableCode').textContent = 'TABLE ' + code;
+  buildSeats();
+  sayLocal('Bienvenue à la table ' + code + ', ' + name + '. Les maisons prennent place.');
+  newHand();
+}
+$('btnQuit').onclick = () => location.reload();
+
+/* ---------- Sièges ---------- */
+const SEAT_POS = [
+  { left: '50%', top: '88%' }, { left: '13%', top: '68%' }, { left: '13%', top: '24%' },
+  { left: '50%', top: '9%' }, { left: '87%', top: '24%' }, { left: '87%', top: '68%' }
+];
+/* Le Trône de Fer en SVG : un éventail d'épées derrière le siège,
+   généré lame par lame. Le grand trône (siège du haut) est doré. */
+function throneSvg(grand) {
+  let blades = '';
+  const cx = 50, cy = 60;
+  for (let a = -57; a <= 57; a += 14.25) {
+    const rad = a * Math.PI / 180, len = 53 - Math.abs(a) * 0.30;
+    const x = cx + Math.sin(rad) * len, y = cy - Math.cos(rad) * len;
+    const w = 2.7, px = Math.cos(rad) * w, py = Math.sin(rad) * w;
+    blades += '<polygon points="' + (cx - px).toFixed(1) + ',' + (cy + py).toFixed(1) +
+      ' ' + (cx + px).toFixed(1) + ',' + (cy - py).toFixed(1) +
+      ' ' + x.toFixed(1) + ',' + y.toFixed(1) + '" fill="' +
+      (grand ? '#9aa2ad' : '#6d757f') + '" stroke="#0e1013" stroke-width="0.8"/>';
+  }
+  return '<svg viewBox="0 0 100 100">' + blades +
+    '<rect x="33" y="56" width="34" height="21" rx="3" fill="' +
+    (grand ? '#3a3325' : '#2b2e34') + '" stroke="' + (grand ? '#d4af37' : '#0e1013') + '"/>' +
+    '<rect x="27" y="62" width="8" height="15" rx="2" fill="#22252a" stroke="#0e1013"/>' +
+    '<rect x="65" y="62" width="8" height="15" rx="2" fill="#22252a" stroke="#0e1013"/></svg>';
+}
+const THRONE_ROT = [180, 225, 315, 0, 45, 135];
+function buildSeats() {
+  document.querySelectorAll('.seat').forEach(e => e.remove());
+  game.players.forEach((p, i) => {
+    const d = document.createElement('div');
+    d.className = 'seat'; d.id = 'seat' + i;
+    d.style.left = SEAT_POS[i].left; d.style.top = SEAT_POS[i].top;
+    d.innerHTML = '<div class="throne' + (i === 3 ? ' grand' : '') +
+      '" style="transform:rotate(' + THRONE_ROT[i] + 'deg)">' + throneSvg(i === 3) + '</div>' +
+      '<div class="bubble"></div>' +
+      '<div class="avatar">' + (p.isBot ? HOUSES[i - 1].sigil : '♔') + '</div>' +
+      '<div class="hand"></div>' +
+      '<div class="nm">' + escapeHtml(p.name) + ' <span class="dl" style="display:none">D</span></div>' +
+      '<div class="hs">' + escapeHtml(p.house) + '</div>' +
+      '<div class="ch"></div><div class="bt"></div>';
+    $('felt').appendChild(d);
+  });
+}
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function cardHtml(c, faceUp) {
+  if (!faceUp) return '<div class="pcard back"></div>';
+  const red = c.s === 1 || c.s === 2;
+  return '<div class="pcard' + (red ? ' red' : '') + '"><span>' + rankLabel(c.r) +
+    '</span><span>' + SUITS[c.s] + '</span></div>';
+}
+function sayLocal(t) {
+  const box = $('logBox');
+  box.innerHTML = t + '<br>' + box.innerHTML;
+}
+function bubble(seat, text) {
+  const b = document.querySelector('#seat' + seat + ' .bubble');
+  if (!b) return;
+  b.textContent = text; b.style.display = 'block';
+  setTimeout(() => { b.style.display = 'none'; }, 2600);
+}
+
+/* ---------- Rendu ---------- */
+function render() {
+  if (!game) return;
+  // Plateau + pot
+  let bh = '';
+  for (let i = 0; i < 5; i++) {
+    bh += game.board[i] ? cardHtml(game.board[i], true) : '<div class="pcard empty"></div>';
+  }
+  $('board').innerHTML = bh;
+  $('pot').textContent = 'Pot : ' + potTotal(game) + ' dragons';
+  $('street').textContent = {
+    preflop: 'Préflop', flop: 'Flop', turn: 'Turn', river: 'River',
+    showdown: 'Abattage', done: 'Main terminée', idle: 'En attente'
+  }[game.street] || game.street;
+  // Sièges
+  game.players.forEach((p, i) => {
+    const el = $('seat' + i); if (!el) return;
+    el.classList.toggle('folded', p.inHand && p.folded);
+    el.classList.toggle('turn', game.actor === i && game.street !== 'done');
+    const showCards = i === 0 || game.street === 'done' && !p.folded;
+    el.querySelector('.hand').innerHTML =
+      p.hand.map(c => cardHtml(c, showCards && p.inHand)).join('');
+    el.querySelector('.ch').textContent = p.inHand || p.chips > 0 ? p.chips + ' 🪙' : 'Éliminé';
+    el.querySelector('.bt').textContent = p.bet > 0 ? 'mise ' + p.bet : (p.lastAction || '');
+    el.querySelector('.dl').style.display = game.dealer === i ? 'inline-block' : 'none';
+  });
+  // Journal du moteur
+  if (game.log.length) {
+    $('logBox').innerHTML = game.log.slice(-14).reverse().map(escapeHtml).join('<br>');
+    game.log = [];
+  }
+  updateActions();
+}
+
+/* ---------- Déroulement ---------- */
+function newHand() {
+  $('banner').style.display = 'none';
+  startHand(game);
+  render();
+  drive();
+}
+function drive() {
+  clearTimeout(timer);
+  if (!game || game.street === 'done') return onHandEnd();
+  const actor = game.players[game.actor];
+  if (!actor) return;
+  if (actor.isBot) {
+    timer = setTimeout(() => {
+      const a = botDecide(game, game.actor);
+      const seat = game.actor;
+      const before = game.street;
+      applyAction(game, seat, a);
+      if (a.type === 'raise' && HOUSES[seat - 1] && Math.random() < 0.5)
+        bubble(seat, HOUSES[seat - 1].quote);
+      render(); drive();
+    }, 650 + Math.random() * 550);
+  }
+  // Sinon : on attend le joueur humain (updateActions a tout préparé).
+}
+function onHandEnd() {
+  render();
+  const mine = game.winners.filter(w => w.seat === 0);
+  const total = game.winners.reduce((s, w) => s + w.amount, 0);
+  let txt;
+  if (!game.winners.length) txt = 'Main terminée.';
+  else if (mine.length)
+    txt = 'Vous remportez ' + mine.reduce((s, w) => s + w.amount, 0) +
+      ' dragons (' + mine[0].handName + ') !';
+  else
+    txt = game.winners.map(w => game.players[w.seat].name + ' (' + game.players[w.seat].house +
+      ') remporte ' + w.amount + ' — ' + w.handName).join('<br>');
+  const me = game.players[0];
+  const alive = game.players.filter(p => p.chips > 0).length;
+  let btn;
+  if (me.chips <= 0) btn = '<br><button id="btnNext">Recharger 1 000 dragons et continuer</button>';
+  else if (alive < 2) btn = '<br><button id="btnNext">Nouvelle partie (les maisons reviennent)</button>';
+  else btn = '<br><button id="btnNext">Main suivante</button>';
+  $('banner').innerHTML = txt + btn;
+  $('banner').style.display = 'block';
+  $('waitMsg').textContent = 'Main terminée.';
+  $('btnRow').style.display = 'none';
+  $('btnNext').onclick = () => {
+    if (me.chips <= 0) me.chips = START_CHIPS;
+    if (game.players.filter(p => p.chips > 0).length < 2)
+      game.players.forEach(p => { if (p.seat !== 0) p.chips = START_CHIPS; });
+    newHand();
+  };
+}
+
+/* ---------- Actions du joueur ---------- */
+function updateActions() {
+  const myTurn = game && game.actor === 0 && game.street !== 'done';
+  $('btnRow').style.display = myTurn ? 'flex' : 'none';
+  $('raiseRow').style.display = 'none';
+  if (!myTurn) {
+    if (game && game.street !== 'done') {
+      const a = game.players[game.actor];
+      $('waitMsg').textContent = a ? 'Au tour de ' + a.name + ' (' + a.house + ')…' : '…';
+    }
+    return;
+  }
+  const legal = legalActions(game, 0);
+  if (!legal) return;
+  const toCall = game.currentBet - game.players[0].bet;
+  $('waitMsg').textContent = 'À vous de jouer.';
+  $('btnCall').textContent = legal.check ? 'Parole' : 'Suivre ' + legal.call;
+  $('btnRaise').disabled = legal.maxRaiseTo < legal.minRaiseTo && legal.maxRaiseTo <= game.currentBet;
+  const r = $('raiseRange');
+  r.min = legal.minRaiseTo; r.max = legal.maxRaiseTo; r.value = legal.minRaiseTo;
+  $('raiseAmt').textContent = 'à ' + r.value;
+}
+$('btnFold').onclick = () => { applyAction(game, 0, { type: 'fold' }); render(); drive(); };
+$('btnCall').onclick = () => {
+  const legal = legalActions(game, 0);
+  applyAction(game, 0, { type: legal.check ? 'check' : 'call' });
+  render(); drive();
+};
+$('btnRaise').onclick = () => {
+  const legal = legalActions(game, 0);
+  if (!legal) return;
+  if (legal.maxRaiseTo < legal.minRaiseTo) { // tapis ou rien
+    applyAction(game, 0, { type: 'raise', to: legal.maxRaiseTo });
+    render(); drive(); return;
+  }
+  $('btnRow').style.display = 'none';
+  $('raiseRow').style.display = 'flex';
+};
+$('raiseRange').oninput = e => { $('raiseAmt').textContent = 'à ' + e.target.value; };
+$('btnRaiseGo').onclick = () => {
+  applyAction(game, 0, { type: 'raise', to: +$('raiseRange').value });
+  render(); drive();
+};
+$('btnRaiseCancel').onclick = () => updateActions();
+
+/* ---------- Amorçage démo (tests) ---------- */
+const saved = localStorage.getItem('trone_identity');
+if (saved) {
+  try {
+    const id = JSON.parse(saved);
+    $('inName').value = id.name || ''; $('inEmail').value = id.email || '';
+  } catch (e) { /* identité illisible : on repart propre */ }
+}
+if (location.hash === '#table') {
+  enterTable('Gabriel', 'gabriel@exemple.com', 'TRONE-2026');
+}
+</script>
+</body>
+</html>
